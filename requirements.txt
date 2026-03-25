@@ -1,0 +1,8 @@
+langchain
+langchain-community
+qdrant-client
+fastembed
+python-dotenv
+unstructured[pdf]  # Industry standard for extracting text and tables from PDFs
+pdf2image          # Helper for unstructured
+tiktoken
