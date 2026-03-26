@@ -3,7 +3,7 @@ from typing_extensions import TypedDict
 from langgraph.graph import StateGraph, START, END
 from langgraph.graph.message import add_messages
 from langgraph.prebuilt import ToolNode, tools_condition
-from langchain_openai import ChatOpenAI
+from langchain_google_genai import ChatGoogleGenerativeAI
 from dotenv import load_dotenv
 
 # Import the tools we built in the previous step
@@ -25,7 +25,7 @@ class State(TypedDict):
 # We use gpt-4o-mini because it is exceptionally good at tool routing 
 # and very cost-effective. We bind our custom tools to it.
 # -------------------------------------------------------------------
-llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+llm = ChatGoogleGenerativeAI(model='gemini-3.1-flash-lite-preview')
 llm_with_tools = llm.bind_tools(financial_tools)
 
 # -------------------------------------------------------------------

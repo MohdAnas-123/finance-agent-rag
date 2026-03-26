@@ -15,15 +15,17 @@ def search_financial_documents(query: str) -> str:
     print(f"   [Tool Execution] Searching Qdrant Database for: '{query}'")
     client = QdrantClient(url="http://localhost:6333")
     
-    # Using Qdrant's native query method which automatically uses the FastEmbed models
-    # we configured in Phase 1 to perform hybrid search.
+    # ADD THESE TWO LINES: Tell the client which embedding models to use for the search
+    client.set_model("BAAI/bge-small-en-v1.5")
+    client.set_sparse_model("Qdrant/bm25")
+    
+    # Now it can successfully translate the query_text into vectors
     results = client.query(
         collection_name="apple_financials",
         query_text=query,
         limit=3
     )
     
-    # FastEmbed stores the original text in the 'document' field
     context = "\n\n---\n\n".join([res.document for res in results])
     return context if context else "No relevant financial documents found."
 
