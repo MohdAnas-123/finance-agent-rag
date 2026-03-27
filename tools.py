@@ -1,14 +1,20 @@
+import os
+
 import yfinance as yf
 from langchain_core.tools import tool
 from qdrant_client import QdrantClient
-from langchain_community.tools import DuckDuckGoSearchRun
+from duckduckgo_search import DuckDuckGoSearchRun
+from pydantic import BaseModel, Field
 
 # 1. The Database Retriever
 @tool
 def search_financial_documents(query: str) -> str:
     """Searches the local Qdrant database for historical Apple financial data and risks."""
     print(f"   [Tool] Searching Database for: '{query}'")
-    client = QdrantClient(url="http://localhost:6333")
+    client = QdrantClient(
+        url=os.getenv("QDRANT_URL"),
+        api_key=os.getenv("QDRANT_API_KEY")
+    )
     client.set_model("BAAI/bge-small-en-v1.5")
     client.set_sparse_model("Qdrant/bm25")
     

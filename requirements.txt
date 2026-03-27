@@ -12,9 +12,11 @@ langchain-community
 langchain-google-genai
 langgraph
 
-# Financial Data
+# Financial Data & Web Search
 yfinance
+duckduckgo-search
 
-# Environment & Data Validation
+# Environment, Data Validation & UI
 python-dotenv
 pydantic
+streamlit
