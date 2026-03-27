@@ -1,62 +1,72 @@
 import yfinance as yf
 from langchain_core.tools import tool
 from qdrant_client import QdrantClient
+from langchain_community.tools import DuckDuckGoSearchRun
 
-# -------------------------------------------------------------------
-# TOOL 1: The Historical Database Retriever
-# -------------------------------------------------------------------
+# 1. The Database Retriever
 @tool
 def search_financial_documents(query: str) -> str:
-    """
-    Searches the Apple 10-K financial report for historical data, 
-    company operations, risk factors, and past revenue.
-    Use this when the user asks about past performance or corporate structure.
-    """
-    print(f"   [Tool Execution] Searching Qdrant Database for: '{query}'")
+    """Searches the local Qdrant database for historical Apple financial data and risks."""
+    print(f"   [Tool] Searching Database for: '{query}'")
     client = QdrantClient(url="http://localhost:6333")
-    
-    # ADD THESE TWO LINES: Tell the client which embedding models to use for the search
     client.set_model("BAAI/bge-small-en-v1.5")
     client.set_sparse_model("Qdrant/bm25")
     
-    # Now it can successfully translate the query_text into vectors
-    results = client.query(
-        collection_name="apple_financials",
-        query_text=query,
-        limit=3
-    )
-    
+    results = client.query(collection_name="apple_financials", query_text=query, limit=3)
     context = "\n\n---\n\n".join([res.document for res in results])
-    return context if context else "No relevant financial documents found."
+    return context if context else "No relevant documents found."
 
 # -------------------------------------------------------------------
-# TOOL 2: The Live Market Fetcher
+# TOOL 1.5: The Dynamic Web Researcher
 # -------------------------------------------------------------------
+@tool
+def search_web_for_company_risks(company_name: str) -> str:
+    """
+    Searches the live internet for a company's latest risk factors, 
+    business operations, and recent news. Use this for ANY company.
+    """
+    print(f"   [Tool] Browsing the web for: {company_name} risk factors...")
+    try:
+        search = DuckDuckGoSearchRun()
+        # We craft a highly specific search query for the AI
+        query = f"{company_name} latest annual report risk factors and business challenges"
+        results = search.invoke(query)
+        return results
+    except Exception as e:
+        return f"Could not find web data for {company_name}."
+
+# 2. Real-Time Price Fetcher
 @tool
 def get_live_stock_price(ticker: str) -> str:
-    """
-    Fetches the current, live stock price for a given ticker symbol (e.g., AAPL, NVDA).
-    Use this strictly when the user asks for 'current', 'today', or 'live' stock prices.
-    """
-    print(f"   [Tool Execution] Fetching live market data for: {ticker}")
+    """Fetches the true, up-to-the-second live stock price for ANY ticker symbol."""
+    print(f"   [Tool] Fetching live price for: {ticker}")
     try:
         stock = yf.Ticker(ticker)
-        # Get the most recent day's closing price
-        price = stock.history(period="1d")['Close'].iloc[-1]
-        return f"The current live price of {ticker} is ${price:.2f}"
-    except Exception as e:
-        return f"Could not fetch price for {ticker}. Check if the ticker symbol is correct."
+        live_price = stock.fast_info['last_price'] 
+        return f"The real-time live price of {ticker} is ${live_price:.2f}"
+    except Exception:
+        return f"Could not fetch live price for {ticker}."
 
-# -------------------------------------------------------------------
-# TOOL 3: The Deterministic Calculator
-# -------------------------------------------------------------------
+# 3. Dynamic Financial Statements
+@tool
+def get_company_financials(ticker: str) -> str:
+    """Fetches recent annual revenue and gross profit for ANY publicly traded company."""
+    print(f"   [Tool] Fetching financials for: {ticker}")
+    try:
+        stock = yf.Ticker(ticker)
+        financials = stock.financials
+        recent_date = financials.columns[0]
+        total_revenue = financials.loc["Total Revenue", recent_date]
+        gross_profit = financials.loc["Gross Profit", recent_date]
+        return f"Financials for {ticker} ({recent_date.date()}):\nRevenue: ${total_revenue:,.2f}\nGross Profit: ${gross_profit:,.2f}"
+    except Exception:
+        return f"Could not fetch financial statements for {ticker}."
+
+# 4. The Calculator
 @tool
 def calculate_percentage_change(old_value: float, new_value: float) -> str:
-    """
-    Calculates the exact percentage change (like YoY growth) between two numbers.
-    Always use this tool instead of calculating math in your head.
-    """
-    print(f"   [Tool Execution] Calculating math: {old_value} -> {new_value}")
+    """Calculates the exact percentage change between two numbers."""
+    print(f"   [Tool] Calculating math: {old_value} -> {new_value}")
     try:
         change = ((new_value - old_value) / old_value) * 100
         direction = "increase" if change >= 0 else "decrease"
@@ -64,10 +74,11 @@ def calculate_percentage_change(old_value: float, new_value: float) -> str:
     except ZeroDivisionError:
         return "Cannot divide by zero."
 
-# Combine them into an array so we can bind them to our Agent later
-financial_tools = [search_financial_documents, get_live_stock_price, calculate_percentage_change]
-
-if __name__ == "__main__":
-    # Quick sanity check to make sure our tools work locally
-    print("Testing Market Tool:", get_live_stock_price.invoke({"ticker": "AAPL"}))
-    print("Testing Math Tool:", calculate_percentage_change.invoke({"old_value": 394328, "new_value": 383285}))
+# Export the tools
+financial_tools = [
+    search_financial_documents, 
+    search_web_for_company_risks, # <-- ADDED HERE
+    get_live_stock_price, 
+    get_company_financials, 
+    calculate_percentage_change
+]

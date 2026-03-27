@@ -1,8 +1,20 @@
-langchain
-langchain-community
+# Document Parsing & Chunking
+pypdf
+langchain-text-splitters
+
+# Vector Database & Embeddings
 qdrant-client
 fastembed
+
+# AI Agents & LLM (Gemini)
+langchain-core
+langchain-community
+langchain-google-genai
+langgraph
+
+# Financial Data
+yfinance
+
+# Environment & Data Validation
 python-dotenv
-unstructured[pdf]  # Industry standard for extracting text and tables from PDFs
-pdf2image          # Helper for unstructured
-tiktoken
+pydantic
