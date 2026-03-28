@@ -3,7 +3,7 @@ import os
 import yfinance as yf
 from langchain_core.tools import tool
 from qdrant_client import QdrantClient
-from duckduckgo_search import DuckDuckGoSearchRun
+from langchain_community.tools import DuckDuckGoSearchRun
 from pydantic import BaseModel, Field
 
 # 1. The Database Retriever
