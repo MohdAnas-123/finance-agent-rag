@@ -4,6 +4,7 @@ langchain-text-splitters
 
 # Vector Database & Embeddings
 qdrant-client
+langchain-qdrant
 fastembed
 
 # AI Agents & LLM (Gemini)
@@ -20,3 +21,4 @@ duckduckgo-search
 python-dotenv
 pydantic
 streamlit
+plotly

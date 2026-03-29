@@ -8,6 +8,16 @@ Unlike standard LLM chatbots, this system utilizes a deterministic **LangGraph s
 
 ---
 
+## 🌟 Key Features
+
+* **Dynamic Tool Routing:** The Quantitative Market agent autonomously decides between fetching live stock prices, pulling historical corporate financials, or executing complex quantitative formulas.
+* **Deterministic Math Engine:** Bypasses LLM arithmetic hallucinations entirely by routing variables into dedicated Python tools to calculate **Intrinsic Value (DCF)** and **CAGR**.
+* **Hybrid RAG Pipeline:** Utilizes Qdrant Cloud for deep semantic search over static SEC 10-K filings, combined with dynamic web search for live corporate risk extraction.
+* **Interactive Dashboard:** A Bloomberg-style Streamlit UI featuring live, interactive candlestick charts rendered with Plotly.
+* **Automated CI/CD Evaluation:** Features a custom grading pipeline using LangSmith to test agent reasoning against a ground-truth dataset, preventing regressions in factual accuracy.
+
+---
+
 ## 🧠 System Architecture
 
 This project implements a multi-agent collaborative network to eliminate hallucinations and ensure deterministic data retrieval:
@@ -17,6 +27,14 @@ This project implements a multi-agent collaborative network to eliminate halluci
 * **Market Agent:** Interfaces with live REST APIs to fetch down-to-the-second stock tick prices and recent corporate financial statements (Revenue, Gross Profit).
 * **Critic Agent (Auditor):** Evaluates the gathered data against strict validation rules. If hallucination or missing data is detected, it rejects the state and forces the system to re-execute the tool calls.
 * **Reporter Agent:** Compiles validated data into a structured format consisting of Financial Summaries, Market Insights, and Risk Factors.
+
+---
+
+## 🧪 Agentic Observability & Evaluation
+
+To ensure the AI system remains factually accurate and does not hallucinate financial metrics, this repository includes an automated evaluation pipeline powered by **LangSmith**.
+
+Instead of manual UI testing, the `evaluate.py` script programmatically runs the LangGraph system through a dataset of known financial facts (e.g., historical revenue figures) and automatically grades the AI's final output for factual precision and correct tool usage.
 
 ---
 
@@ -56,9 +74,10 @@ QDRANT_API_KEY=your_qdrant_api_key
 
 streamlit run app.py
 
-📈 System Limitations & Future Scalability
+##📈 System Limitations & Future Scalability
+
 During development, I identified a critical bottleneck regarding standard Retrieval-Augmented Generation (RAG) when dealing with global stock markets:
 
-Current State: The system uses a Proof-of-Concept static Qdrant collection for deep RAG (Apple 10-K), while utilizing live web-search for other global tickers to prevent vector bloat on the local machine.
+* **Current State**: The system uses a Proof-of-Concept static Qdrant collection for deep RAG (Apple 10-K), while utilizing live web-search for other global tickers to prevent vector bloat on the local machine.
 
-Future Work (Dynamic Ephemeral RAG): To support full, deep-document ingestion for any global stock without causing storage crashes, future iterations will implement "Just-In-Time" RAG. This pipeline will dynamically download SEC EDGAR filings, embed them into temporary Qdrant namespaces, and delete the collection immediately post-execution to optimize memory limits.
+* **Future Work (Dynamic Ephemeral RAG)**: To support full, deep-document ingestion for any global stock without causing storage crashes, future iterations will implement "Just-In-Time" RAG. This pipeline will dynamically download SEC EDGAR filings, embed them into temporary Qdrant namespaces, and delete the collection immediately post-execution to optimize memory limits.

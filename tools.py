@@ -1,26 +1,39 @@
 import os
-
+import math
 import yfinance as yf
 from langchain_core.tools import tool
-from qdrant_client import QdrantClient
+from langchain_qdrant import QdrantVectorStore
+from langchain_community.embeddings.fastembed import FastEmbedEmbeddings
 from langchain_community.tools import DuckDuckGoSearchRun
 from pydantic import BaseModel, Field
 
 # 1. The Database Retriever
 @tool
 def search_financial_documents(query: str) -> str:
-    """Searches the local Qdrant database for historical Apple financial data and risks."""
-    print(f"   [Tool] Searching Database for: '{query}'")
-    client = QdrantClient(
-        url=os.getenv("QDRANT_URL"),
-        api_key=os.getenv("QDRANT_API_KEY")
-    )
-    client.set_model("BAAI/bge-small-en-v1.5")
-    client.set_sparse_model("Qdrant/bm25")
-    
-    results = client.query(collection_name="apple_financials", query_text=query, limit=3)
-    context = "\n\n---\n\n".join([res.document for res in results])
-    return context if context else "No relevant documents found."
+    """Searches the Qdrant vector database for SEC filings and financial documents."""
+    print(f"   [Tool] Searching documents for: {query}")
+    try:
+        # 1. Initialize the exact same embedding model used during ingestion
+        embeddings = FastEmbedEmbeddings(model_name="BAAI/bge-small-en-v1.5")
+        
+        # 2. Connect to the LangChain-managed Qdrant collection
+        vector_store = QdrantVectorStore.from_existing_collection(
+            embedding=embeddings,
+            collection_name="apple_financials",
+            url=os.getenv("QDRANT_URL"),
+            api_key=os.getenv("QDRANT_API_KEY"),
+        )
+        
+        # 3. Perform the search
+        results = vector_store.similarity_search(query, k=3)
+        
+        if not results:
+            return "No relevant financial documents found."
+            
+        # Format the chunks into a single string for the LLM
+        return "\n\n".join([doc.page_content for doc in results])
+    except Exception as e:
+        return f"Failed to search documents: {e}"
 
 # -------------------------------------------------------------------
 # TOOL 1.5: The Dynamic Web Researcher
@@ -79,6 +92,68 @@ def calculate_percentage_change(old_value: float, new_value: float) -> str:
         return f"That is a {abs(change):.2f}% {direction}."
     except ZeroDivisionError:
         return "Cannot divide by zero."
+    
+# -------------------------------------------------------------------
+# TOOL 6: Compound Annual Growth Rate (CAGR)
+# -------------------------------------------------------------------
+@tool
+def calculate_cagr(start_value: float, end_value: float, years: int) -> str:
+    """
+    Calculates the Compound Annual Growth Rate (CAGR).
+    Use this when the user asks about revenue growth, profit growth, 
+    or annualized returns over a specific number of years.
+    """
+    print(f"   [Tool] Calculating CAGR over {years} years...")
+    try:
+        if start_value <= 0 or years <= 0:
+            return "Error: Start value and years must be greater than zero."
+        
+        cagr = (end_value / start_value) ** (1 / years) - 1
+        return f"The CAGR is {cagr * 100:.2f}%"
+    except Exception as e:
+        return f"Failed to calculate CAGR: {e}"
+
+# -------------------------------------------------------------------
+# TOOL 7: Discounted Cash Flow (DCF) Valuation
+# -------------------------------------------------------------------
+@tool
+def calculate_basic_dcf(
+    current_free_cash_flow: float, 
+    growth_rate: float, 
+    discount_rate: float, 
+    terminal_multiple: float, 
+    years_to_project: int = 5
+) -> str:
+    """
+    Performs a basic Discounted Cash Flow (DCF) valuation to find the intrinsic value of a business.
+    Inputs required (as decimals, e.g., 0.10 for 10%):
+    - current_free_cash_flow: The most recent year's FCF.
+    - growth_rate: Projected annual growth rate of FCF.
+    - discount_rate: The required rate of return (WACC).
+    - terminal_multiple: The exit multiple to calculate terminal value.
+    """
+    print(f"   [Tool] Executing DCF Valuation Engine...")
+    try:
+        total_present_value = 0
+        projected_fcf = current_free_cash_flow
+        
+        # 1. Calculate Present Value of projected cash flows
+        for year in range(1, years_to_project + 1):
+            projected_fcf *= (1 + growth_rate)
+            discount_factor = (1 + discount_rate) ** year
+            present_value = projected_fcf / discount_factor
+            total_present_value += present_value
+            
+        # 2. Calculate Terminal Value (Exit Multiple Method)
+        terminal_value = projected_fcf * terminal_multiple
+        pv_terminal_value = terminal_value / ((1 + discount_rate) ** years_to_project)
+        
+        # 3. Sum for Enterprise Value
+        intrinsic_enterprise_value = total_present_value + pv_terminal_value
+        
+        return f"Estimated Intrinsic Enterprise Value: ${intrinsic_enterprise_value:,.2f} (Based on {years_to_project}yr projection)"
+    except Exception as e:
+        return f"Failed to calculate DCF: {e}"
 
 # Export the tools
 financial_tools = [
@@ -86,5 +161,7 @@ financial_tools = [
     search_web_for_company_risks, # <-- ADDED HERE
     get_live_stock_price, 
     get_company_financials, 
-    calculate_percentage_change
+    calculate_percentage_change,
+    calculate_cagr,        # <-- ADDED
+    calculate_basic_dcf
 ]
